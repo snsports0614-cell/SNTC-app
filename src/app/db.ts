@@ -1,37 +1,56 @@
-// 로컬 스토리지를 사용하여 브라우저에 데이터를 저장하는 방식입니다.
+import { openDB } from 'idb';
+
+const DB_NAME = 'SN_Training_DB';
+const STORE_REPORTS = 'reports';
+const STORE_GROUPS = 'groups';
+
+export const initDB = async () => {
+  return openDB(DB_NAME, 1, {
+    upgrade(db) {
+      if (!db.objectStoreNames.contains(STORE_REPORTS)) {
+        const store = db.createObjectStore(STORE_REPORTS, {
+          keyPath: 'id',
+          autoIncrement: true,
+        });
+        store.createIndex('playerName', 'playerName');
+        store.createIndex('group', 'group');
+      }
+      if (!db.objectStoreNames.contains(STORE_GROUPS)) {
+        db.createObjectStore(STORE_GROUPS, {
+          keyPath: 'id',
+          autoIncrement: true,
+        });
+      }
+    },
+  });
+};
+
 export const saveReportToDB = async (data: any) => {
-  const reports = await getAllReports();
-  const newReport = { ...data, id: Date.now() };
-  localStorage.setItem('sn_reports', JSON.stringify([...reports, newReport]));
-  return true;
+  const db = await initDB();
+  return db.add(STORE_REPORTS, { ...data, createdAt: new Date() });
 };
 
 export const getAllReports = async () => {
-  if (typeof window === 'undefined') return [];
-  const data = localStorage.getItem('sn_reports');
-  return data ? JSON.parse(data) : [];
+  const db = await initDB();
+  return db.getAll(STORE_REPORTS);
 };
 
-export const deleteReport = async (id: any) => {
-  const reports = await getAllReports();
-  const filtered = reports.filter((r: any) => r.id !== id);
-  localStorage.setItem('sn_reports', JSON.stringify(filtered));
+export const deleteReport = async (id: number) => {
+  const db = await initDB();
+  return db.delete(STORE_REPORTS, id);
 };
 
-export const saveGroupToDB = async (name: string) => {
-  const groups = await getGroups();
-  const newGroup = { id: Date.now(), name };
-  localStorage.setItem('sn_groups', JSON.stringify([...groups, newGroup]));
+export const saveGroupToDB = async (groupName: string) => {
+  const db = await initDB();
+  return db.add(STORE_GROUPS, { name: groupName });
 };
 
 export const getGroups = async () => {
-  if (typeof window === 'undefined') return [{id: 1, name: '엘리트 반'}];
-  const data = localStorage.getItem('sn_groups');
-  return data ? JSON.parse(data) : [{id: 1, name: '엘리트 반'}];
+  const db = await initDB();
+  return db.getAll(STORE_GROUPS);
 };
 
-export const deleteGroup = async (id: any) => {
-  const groups = await getGroups();
-  const filtered = groups.filter((g: any) => g.id !== id);
-  localStorage.setItem('sn_groups', JSON.stringify(filtered));
+export const deleteGroup = async (id: number) => {
+  const db = await initDB();
+  return db.delete(STORE_GROUPS, id);
 };
